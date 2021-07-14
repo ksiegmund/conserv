@@ -142,7 +142,23 @@ spain$beta <- spain$beta[,rownames(spain$targets)]
 identical(spain$targets$title,usa$targets$title)
 identical(rownames(spain$targets),colnames(spain$beta))
 identical(rownames(usa$targets),colnames(usa$beta))
+identical(rownames(usa$beta),rownames(spain$beta))
 ```
+
+```{r save-cgsonly}
+cgidx <- which(substr(rownames(usa$beta),1,2)=="cg")
+length(cgidx)
+
+usa$beta <- usa$beta[cgidx,]
+spain$beta <- spain$beta[rownames(usa$beta),]
+
+usa$hm450annot <- usa$hm450annot[rownames(usa$beta),]
+#save space
+spain$hm450annot <- NULL
+
+dim(usa$beta)
+```
+
 
 ```{r save}
 save(usa,file = file.path("data","usa.rda"))
