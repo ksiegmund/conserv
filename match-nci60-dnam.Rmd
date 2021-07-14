@@ -1,0 +1,155 @@
+---
+title: "Match nci-60 DNAm datasets"
+author: "K Siegmund"
+date: "7/13/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(limma)
+```
+
+# {.tabset}
+
+## Data
+
+Match the dnam data from Spain with the samples analyzed in the USA.
+
+```{r load-data}
+load(file = c("data/dnamspain.rda"))
+names(dnamspain)
+```
+
+```{r ordertissues}
+os <- order(dnamspain$targets$tissue,
+            dnamspain$targets$title)
+dnamspain$targets <- dnamspain$targets[os,]
+dnamspain$beta <- dnamspain$beta[,rownames(dnamspain$targets)]
+```
+
+What are the characterization data?
+```{r tissue}
+dnamspain$targets
+```
+
+What features from the array are included?
+```{r whichfeatures}
+table(substr(rownames(dnamspain$beta),1,2))
+```
+That's all of them.
+
+
+
+Let's load the USA data set.
+```{r load-usa-data}
+load(file = c("data/dnamusa.rda"))
+names(dnamusa)
+dim(dnamusa$beta)
+```
+
+This one doen't have the rs SNPs, and has 61 samples.
+
+```{r ordertissues}
+os <- order(dnamusa$targets$tissue,
+            dnamusa$targets$title)
+dnamusa$targets <- dnamusa$targets[os,]
+dnamusa$beta <- dnamusa$beta[,rownames(dnamusa$targets)]
+```
+
+
+```{r vars}
+dnamusa$targets
+```
+
+Notice that the cell line names are different in the 2 GEO data sets.  I'll need to change these to agree so that I can match the cell lines from the different GEO entries.
+
+## Match samples
+
+```{r match.samples}
+midx <- match(dnamusa$targets$title,dnamspain$targets$title)
+midx
+```
+
+```{r nomatch}
+nmidx <- which(is.na(midx))
+dnamusa$targets$title[nmidx]
+```
+
+Here are the names from Spain, to substitute for the USA names so we can match them.
+
+```{r spainname}
+spainname <- c("HS_578T","T47D","COLO-205",
+             "HL-60_TB","LOX_IMVI","MDA_N",
+             "A549_ATCC","IGR-OV1","NCI-ADR-RES",
+             "RC0.1","786-O","RXF393",
+             "TK10" ,"U031")
+cbind.data.frame(dnamusa$targets$title[nmidx],
+                 spainname)             
+```
+
+Now substitute these names and find subset common to both sets.
+```{r change-name}
+dnamusa$targets$title[nmidx] <- spainname
+```
+
+Here are the data generated in the USA that are for the same cell lines as previously run in Spain.
+
+```{r match.samples2}
+midx <- match(dnamusa$targets$title,dnamspain$targets$title)
+midx
+```
+
+These don't match:
+```{r nomatch2}
+nmidx <- which(is.na(midx))
+dnamusa$targets$title[nmidx]
+```
+
+Now let's subset to common cell lines.
+```{r usa}
+usa <- dnamusa
+
+usa$targets <- dnamusa$targets[-nmidx,]
+usa$beta <- dnamusa$beta[,rownames(usa$targets)]
+```
+
+```{r spain}
+spain <- dnamspain
+midx <- match(spain$targets$title,
+              usa$targets$title)
+nmidx <- which(is.na(midx))
+
+spain$targets <- spain$targets[-nmidx,]
+spain$beta <- spain$beta[,rownames(spain$targets)]
+spain$beta <- spain$beta[rownames(usa$beta),]
+```
+
+```{r order}
+identical(spain$targets$title,usa$targets$title)
+```
+
+```{r match-order}
+idx<-match(usa$targets$title,spain$targets$title)
+spain$targets<- spain$targets[idx,]
+spain$beta <- spain$beta[,rownames(spain$targets)]
+```
+
+```{r check-order}
+identical(spain$targets$title,usa$targets$title)
+identical(rownames(spain$targets),colnames(spain$beta))
+identical(rownames(usa$targets),colnames(usa$beta))
+```
+
+```{r save}
+save(usa,file = file.path("data","usa.rda"))
+save(spain,file = file.path("data","spain.rda"))
+```
+
+```{r sessionInfo}
+sessionInfo()
+```
+
