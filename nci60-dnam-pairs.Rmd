@@ -1,0 +1,137 @@
+---
+title: "Analyze nci-60 pwd"
+author: "K Siegmund"
+date: "7/13/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(limma)
+library(tidyverse)
+```
+
+# {.tabset}
+
+## Data
+
+Load the data sets.
+```{r load-data}
+load(file = c("data/spain.rda"))
+load(file = c("data/usa.rda"))
+```
+
+```{r data-list}
+names(spain)
+dim(spain$beta)
+names(usa)
+dim(usa$beta)
+identical(spain$targets$title,usa$targets$title)
+```
+
+Conservation in sample 1.
+
+```{r scattersmooths}
+par(mfrow=c(1,2))
+smoothScatter(spain$beta[,1],usa$beta[,1],nrpoints=500,
+              xlab="Spain",
+              ylab="USA",
+              main=spain$targets[1,])
+a <- (spain$beta[,1] + usa$beta[,1])/2
+d <-  spain$beta[,1] - usa$beta[,1]
+smoothScatter(a,d,nrpoints=500,
+              xlab="Average Beta",
+              ylab="Beta-Difference",
+              main=spain$targets[1,])
+```
+
+```{r conserv}
+diffs <- abs(spain$beta - usa$beta)
+avgs  <- (spain$beta + usa$beta)/2
+
+pwd <- rowMeans(diffs)
+pwa <- rowMeans(avgs)
+```
+
+```{r scatsmooths-consv}
+smoothScatter(pwa,pwd,nrpoints=500,
+              xlab="Average Beta",
+              ylab="avg PWD",
+              main="59 NCI-60 samples")
+```
+
+## Annotate PWD
+
+How many features are in promoter regions?
+```{r promoter}
+promoter <- ifelse(usa$hm450annot$Regulatory_Feature_Group=="Promoter_Associated",1,0)
+sum(promoter)
+```
+
+And how many are in enhancer regions?
+
+```{r enhancer}
+enhancer <- ifelse(!is.na(usa$hm450annot$Enhancer),1,0)
+sum(enhancer)
+```
+
+**Stratify by Promoter**
+
+Here is PWD vs Promoter region (yes/no).
+```{r boxplots}
+boxplot(pwd~promoter)
+t.test(pwd~promoter)
+```
+
+PWD is lower in Promoters than elsewhere in the genome.
+
+**Stratify by Enhancer**
+
+```{r boxplots-enh}
+boxplot(pwd~enhancer)
+t.test(pwd~enhancer)
+```
+
+We do not find PWD lower in enhancers, like we did Promoters.
+
+**Stratify by 'UCSC_RefGene_Group'**
+
+I'm going to save the first category listed.
+
+```{r ref-gene-gp}
+refgenegp <- strsplit(usa$hm450annot$UCSC_RefGene_Group,';')
+
+#  assign feature to the 1st refgene group listed
+gp1 <- map(refgenegp,pluck,1)
+#  find the null entries (those not gene associated)
+gp1.1 <- map_int(gp1,is.null)
+#  assign null entries -9 
+refgenegp <- unlist(ifelse(gp1.1,-9,gp1))
+length(refgenegp)
+table(refgenegp)
+```
+
+```{r boxplot-refgenegroup}
+boxplot(pwd~refgenegp)
+```
+
+Let's cut off the top of the figure to spread out the IQR.
+```{r boxplot-refgenegroup-lh}
+boxplot(pwd~refgenegp,ylim=c(0,.2))
+abline(0.05,0,col=2)
+```
+
+Next steps:   
+1. Bring in other data to characterize the most conserved regions;  
+2. Average features local to a region?   
+3. Characterize by base context?
+
+## Session Info
+
+```{r sessionInfo}
+sessionInfo()
+```
+

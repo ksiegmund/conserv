@@ -1,0 +1,81 @@
+---
+title: "vizualize nci-60 DNAm datasets"
+author: "K Siegmund"
+date: "7/13/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(limma)
+```
+
+# {.tabset}
+
+## Spain
+
+```{r load-data}
+load(file = c("data/spain.rda"))
+names(spain)
+```
+
+
+What are the cancer types?
+```{r tissue}
+table(spain$targets$tissue)
+```
+
+Filter top 1000 SD cg features on Beta scale.   
+```{r filterfeatures}
+Mval <- log2(spain$beta)-log2(1-spain$beta)
+fsds  <- matrixStats::rowSds(spain$beta)
+rfsds <- rank(-fsds)
+fidx <- which(rfsds <= 1000)
+```
+
+Label and color samples by their tissue type.
+```{r MDSplot}
+limma::plotMDS(Mval[fidx,],
+               labels=substr(spain$targets$tissue,1,2),
+        col=unclass(as.factor(spain$targets$tissue)),
+        main="MDS plot") #color by tissue
+```
+
+## USA
+
+Let's load the USA data set.
+```{r load-usa-data}
+load(file = c("data/usa.rda"))
+names(usa)
+dim(usa$beta)
+```
+
+What cancer types are named differently:
+```{r tissue-usa}
+table(usa$targets$tissue)
+```
+
+Filter top 1000 SD cg features on Beta scale.
+```{r filterfeatures-usa}
+Mval <- log2(usa$beta)-log2(1-usa$beta)
+fsds  <- matrixStats::rowSds(usa$beta)
+rfsds <- rank(-fsds)
+fidx <- which(rfsds <= 1000)
+```
+
+```{r MDSplot.usa}
+limma::plotMDS(Mval[fidx,],
+               labels=substr(usa$targets$tissue,1,2),
+        col=unclass(as.factor(usa$targets$tissue)),
+        main="MDS plot") #color by tissue
+```
+
+## sessionInfo
+
+```{r sessionInfo}
+sessionInfo()
+```
+
